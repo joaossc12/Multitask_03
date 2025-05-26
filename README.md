@@ -1,4 +1,4 @@
-# Sistema de Controle de Capacidade com FreeRTOS
+# Sistema de Controle de Acesso 
 
 Este projeto implementa um sistema de controle de capacidade com entrada e saída de pessoas, usando um microcontrolador **Raspberry Pi Pico** e um display **OLED I2C**, com lógica concorrente baseada em **FreeRTOS**.
 
@@ -8,19 +8,35 @@ O sistema conta e exibe o número de pessoas presentes em um ambiente, utilizand
 
 ## 🔧 Funcionalidades
 
-- Controle de entrada e saída com dois botões (A e B).
-- Display OLED com indicação da capacidade atual e mensagens.
-- Feedback visual com LEDs RGB:
-  - Azul: vazio
-  - Verde: capacidade disponível
-  - Amarelo: quase lotado
-  - Vermelho: lotado
-- Alarme sonoro com buzzer ao tentar entrar quando cheio.
-- Reset do sistema via botão (simulando o BOOTSEL).
-- Lógica de concorrência segura com:
-  - Semáforo de contagem para vagas
-  - Mutex para proteger o display OLED
-  - Semáforo binário para extensões futuras
+
+- **Gerenciamento de Vagas**  
+  - Semáforo de contagem (`xContadorSemph`) controla até `CAPACIDADE` vagas.  
+  - Ao pressionar “Entrada” (BOTÃO_A), tenta-se incrementar o semáforo (+1 vaga ocupada).  
+  - Ao pressionar “Saída” (BOTÃO_B), tenta-se decrementar o semáforo (–1 vaga ocupada).  
+  - Se o estacionamento estiver **lotado** ou **vazio**, há feedback visual e sonoro.
+
+- **Reset de Contador**  
+  - BOTÃO de reset (JOYSTICK_BT) libera um **semáforo binário** (`xBinSemphReset`) que aciona a tarefa de reset.  
+  - Ao resetar, buzzer emite dois bipes e o semáforo de contagem é recriado com valor zero.
+
+- **Interface com Usuário**  
+  - **Display OLED SSD1306** exibe:  
+    - “CONTROLE”  
+    - “CAPACIDADE”  
+    - Quantidade atual de vagas ocupadas (`n / CAPACIDADE`)  
+    - Estado textual: “LOTADO!”, “1 VAGA!”, “DISPONÍVEL” ou “VAZIO”.  
+  - **LEDs RGB** mudam de cor conforme o nível de ocupação:  
+    - Vermelho = lotado  
+    - Amarelo = última vaga  
+    - Verde = vagas disponíveis  
+    - Azul = vazio  
+  - **Buzzer PWM** emite alertas curtos quando o estacionamento atinge lotação máxima ou ao resetar.
+
+- **Sincronização de Tarefas**  
+  - **Semáforo de contagem** (`xContadorSemph`) para vagas.  
+  - **Semáforo binário** para cada botão (`xBinSemphEntrada`, `xBinSemphSaida`, `xBinSemphReset`).  
+  - **Mutex** (`xMutexDisplay`) para proteger o acesso ao display OLED.
+
 
 ---
 
@@ -41,7 +57,7 @@ O sistema conta e exibe o número de pessoas presentes em um ambiente, utilizand
 |----------------|------------|---------------------------------|
 | Botão A         | GPIO 5     | Entrada                         |
 | Botão B         | GPIO 6     | Saída                           |
-| Botão Joystick  | GPIO 22    | Reset do sistema (USB BOOTSEL)  |
+| Botão Joystick  | GPIO 22    | Reset do sistema                |
 | LED Vermelho    | GPIO 13    | Indicação de "lotado"           |
 | LED Verde       | GPIO 11    | Indicação de capacidade disponível |
 | LED Azul        | GPIO 12    | Indicação de vazio              |
@@ -51,19 +67,18 @@ O sistema conta e exibe o número de pessoas presentes em um ambiente, utilizand
 
 ---
 
-## 🧠 Arquitetura de Software
+## 🧰 Hardware e Bibliotecas
 
-O projeto utiliza três tarefas principais:
-
-- `vTaskEntrada`: Monitora o botão A (entrada). Se houver vagas disponíveis, incrementa o contador e atualiza os LEDs e o display.
-- `vTaskSaida`: Monitora o botão B (saída). Libera uma vaga, decrementa o contador e atualiza os LEDs e o display.
-- `ISR Joystick`: Força um reset do firmware ao segurar o botão.
-
-### Recursos de FreeRTOS usados:
-
-- `xSemaphoreCreateCounting()` → Semáforo de contagem para vagas.
-- `xSemaphoreCreateMutex()` → Proteção do recurso compartilhado (display).
-- `xSemaphoreGiveFromISR()` → Manipulação segura em interrupções.
+- **Placa**: Raspberry Pi Pico (RP2040)  
+- **Display OLED**: SSD1306 via I2C (`lib/ssd1306.h`, `lib/font.h`)  
+- **LEDs RGB**: GPIOs 11 (verde), 12 (azul) e 13 (vermelho)  
+- **Buzzer**: GPIO 21 (PWM)  
+- **Botões**:  
+  - JOYSTICK_BT (GPIO 22) → Reset  
+  - BOTÃO_A (GPIO 5) → Entrada  
+  - BOTÃO_B (GPIO 6) → Saída  
+- **RTOS**: FreeRTOS (`FreeRTOS.h`, `semphr.h`)  
+- **I2C/PWM/GPIO**: SDK da Raspberry Pi Pico
 
 ---
 
@@ -85,7 +100,7 @@ O projeto utiliza três tarefas principais:
 2. Conecte os periféricos conforme o mapeamento acima.
 3. Compile o projeto usando `cmake` e `make`.
 4. Envie o firmware para o Pico via USB (modo BOOTSEL).
-5. O sistema já iniciará e mostrará "0/15 - Disponível" no display.
+5. O sistema já iniciará e mostrará "0/10 - Disponível" no display.
 
 ---
 
