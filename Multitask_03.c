@@ -7,7 +7,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "pico/bootrom.h"
+
 
 #define I2C_PORT i2c1
 #define I2C_SDA 14
