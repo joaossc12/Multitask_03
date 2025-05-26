@@ -24,6 +24,7 @@
 #define CAPACIDADE 10
 
 ssd1306_t ssd;
+
 SemaphoreHandle_t xContadorSemph; //Será responsável pelo numero de VAGAS OCUPADAS
 SemaphoreHandle_t xMutexDisplay; //Controla o acesso aos periféricos
 SemaphoreHandle_t xBinSemphReset; //Acorda a task reset
@@ -31,9 +32,8 @@ SemaphoreHandle_t xBinSemphEntrada; //Acorda a task entrada
 SemaphoreHandle_t xBinSemphSaida; //Acorda a task saida
 
 
-// ISR do botão A (incrementa o semáforo de contagem)
-void gpio_callback(uint gpio, uint32_t events);
-// ISR para BOOTSEL e botão de evento
+
+// ISR para disparo dos semaforos binarios
 void gpio_irq_handler(uint gpio, uint32_t events);
 // Função ded atulização de Display e LED
 void Atualiza(int numero);
@@ -116,14 +116,14 @@ void gpio_irq_handler(uint gpio, uint32_t events)
     static absolute_time_t last_time_B = 0;
     absolute_time_t now = get_absolute_time();
     if (gpio == JOYSTICK_BT){
-        if (absolute_time_diff_us(last_time_JB, now) > 200000) { //Deboucing
+        if (absolute_time_diff_us(last_time_JB, now) > 200000) { //Debouncing
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
             xSemaphoreGiveFromISR(xBinSemphReset, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             last_time_JB = now;
         }
     }else if (gpio == BOTAO_A){
-        if (absolute_time_diff_us(last_time_A, now) > 200000) { //Deboucing
+        if (absolute_time_diff_us(last_time_A, now) > 200000) { //Debouncing
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
             xSemaphoreGiveFromISR(xBinSemphEntrada, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -131,7 +131,7 @@ void gpio_irq_handler(uint gpio, uint32_t events)
         }
 
     }else if (gpio == BOTAO_B){
-        if (absolute_time_diff_us(last_time_B, now) > 200000) { //Deboucing
+        if (absolute_time_diff_us(last_time_B, now) > 200000) { //Debouncing
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
             xSemaphoreGiveFromISR(xBinSemphSaida, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
