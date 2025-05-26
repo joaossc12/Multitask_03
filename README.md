@@ -105,7 +105,7 @@ O sistema conta e exibe o número de pessoas presentes em um ambiente, utilizand
 ---
 
 ## 📸 Exemplo de Saída (Display OLED)
-
+---
 +----------------------------+
 | CONTROLE |
 | CAPACIDADE |
